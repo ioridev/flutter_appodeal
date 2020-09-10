@@ -26,9 +26,29 @@
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-  if ([@"setUserData" isEqualToString:call.method]){
+  if ([@"setUserIdData" isEqualToString:call.method]) {
       NSString* userId = call.arguments[@"userId"];
       [Appodeal setUserId:userId];
+      result([NSNumber numberWithBool:YES]);
+  }else if ([@"setUserFullData" isEqualToString:call.method]){
+      NSString* userId = call.arguments[@"userId"];
+      NSUInteger age = [call.arguments[@"age"] longValue];
+      NSUInteger genderIndex = [call.arguments[@"gender"] longValue];
+      [Appodeal setUserId:userId];
+      [Appodeal setUserAge:age];
+      switch (genderIndex) {
+        case 0:
+            [Appodeal setUserGender:AppodealUserGenderMale];
+            break;
+        case 1:
+            [Appodeal setUserGender:AppodealUserGenderFemale];
+            break;
+        case 2:
+            [Appodeal setUserGender:AppodealUserGenderOther];
+            break;
+        default:
+            break;
+      }
       result([NSNumber numberWithBool:YES]);
   }else if ([@"initialize" isEqualToString:call.method]) {
       NSString* appKey = call.arguments[@"appKey"];
@@ -61,8 +81,6 @@
 
 - (AppodealAdType) typeFromParameter:(NSNumber*) parameter{
     switch ([parameter intValue]) {
-        case 0:
-            return AppodealAdTypeInterstitial;
         case 4:
             return AppodealAdTypeRewardedVideo;
         default:
@@ -73,8 +91,6 @@
 
 - (AppodealShowStyle) showStyleFromParameter:(NSNumber*) parameter{
     switch ([parameter intValue]) {
-        case 0:
-            return AppodealShowStyleInterstitial;
         case 4:
             return AppodealShowStyleRewardedVideo;
         default:
@@ -107,12 +123,14 @@
 }
 
 - (void)rewardedVideoDidFinish:(float)rewardAmount name:(NSString *)rewardName {
-    NSDictionary *params = rewardName != nil ? @{
-                                                 @"rewardAmount" : @(rewardAmount),
-                                                 @"rewardType" : rewardName
-                                                 }: nil;
+    NSDictionary *params =  @{ @"rewardAmount" : @(rewardAmount),
+                                @"rewardType" : rewardName};
                                                  
    [channel invokeMethod:@"onRewardedVideoFinished" arguments: params];
+}
+
+- (void)rewardedVideoDidExpired {
+    [channel invokeMethod:@"onRewardedVideoExpired" arguments:nil];
 }
 
 @end

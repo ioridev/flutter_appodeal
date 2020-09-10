@@ -28,7 +28,7 @@ class _MyAppState extends State<MyApp> {
       types.add(AppodealAdType.AppodealAdTypeInterstitial);
       types.add(AppodealAdType.AppodealAdTypeRewardedVideo);
       FlutterAppodeal.instance.videoListener = (RewardedVideoAdEvent event,
-          {String rewardType, double rewardAmount}) {
+          {String rewardType, double rewardAmount, bool wasFullyWatched}) {
         print("RewardedVideoAd event $event");
         setState(() {
           videoState = "State $event";
@@ -36,8 +36,10 @@ class _MyAppState extends State<MyApp> {
       };
       // You can set user data for better ad targeting and higher eCPM.
       // If not needed, remove or comment out below.
-      await FlutterAppodeal.instance.setUserData(
+      await FlutterAppodeal.instance.setUserFullData(
         userId: 'XXXXX-YYYYY-ZZZZZ',
+        age: 25, 
+        gender: 0, // Set 0:'male', 1:'female' or 2:'other'  
       );
 
       // You should use here your APP Key from Appodeal
@@ -75,28 +77,9 @@ class _MyAppState extends State<MyApp> {
                 },
                 child: new Text('Show Rewarded'),
               )),
-          new Container(
-              height: 100.0,
-              color: Colors.blue,
-              child: new FlatButton(
-                onPressed: () {
-                  this.loadInterstital();
-                },
-                child: new Text('Show Interstitial'),
-              ))
         ])),
       ),
     ));
-  }
-
-  void loadInterstital() async {
-    bool loaded = await FlutterAppodeal.instance
-        .isLoaded(AppodealAdType.AppodealAdTypeInterstitial);
-    if (loaded) {
-      FlutterAppodeal.instance.showInterstitial();
-    } else {
-      print("Interstitial loading...");
-    }
   }
 
   void loadRewarded() async {

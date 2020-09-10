@@ -18,19 +18,20 @@ enum RewardedVideoAdEvent {
   present,
   willDismiss,
   finish,
+  expired,
 }
 
 typedef void RewardedVideoAdListener(RewardedVideoAdEvent event,
-    {String rewardType, double rewardAmount});
+    {String rewardType, double rewardAmount, bool wasFullyWatched});
 
 class FlutterAppodeal {
   bool shouldCallListener;
 
   final MethodChannel _channel;
-
+  
   /// Called when the status of the video ad changes.
   RewardedVideoAdListener videoListener;
-
+  
   static const Map<String, RewardedVideoAdEvent> _methodToRewardedVideoAdEvent =
       const <String, RewardedVideoAdEvent>{
     'rewardedVideoDidLoadAdIsPrecache': RewardedVideoAdEvent.loaded,
@@ -41,6 +42,7 @@ class FlutterAppodeal {
     'rewardedVideoWillDismissAndWasFullyWatched':
         RewardedVideoAdEvent.willDismiss,
     'onRewardedVideoFinished': RewardedVideoAdEvent.finish,
+    'onRewardedVideoExpired': RewardedVideoAdEvent.expired,
   };
 
   static final FlutterAppodeal _instance = new FlutterAppodeal.private(
@@ -53,14 +55,25 @@ class FlutterAppodeal {
 
   static FlutterAppodeal get instance => _instance;
 
-  // NOTE: Additionally, gender and age can be set for
-  //   user data for better ad targeting and higher eCPM.
-  Future setUserData({
+  Future setUserIdData({
     String userId,
   }) async {
     shouldCallListener = false;
-    await _channel.invokeMethod('setUserData', <String, dynamic>{
+    await _channel.invokeMethod('setUserIdData', <String, dynamic>{
       'userId': userId,
+    });
+  }
+
+  Future setUserFullData({
+    String userId,
+    int age,
+    int gender,
+  }) async {
+    shouldCallListener = false;
+    await _channel.invokeMethod('setUserFullData', <String, dynamic>{
+      'userId': userId,
+      'age': age,
+      'gender': gender,
     });
   }
 
@@ -108,16 +121,26 @@ class FlutterAppodeal {
     final RewardedVideoAdEvent rewardedEvent =
         _methodToRewardedVideoAdEvent[call.method];
     if (rewardedEvent != null && shouldCallListener) {
+      
       if (this.videoListener != null) {
+        
         if (rewardedEvent == RewardedVideoAdEvent.finish &&
             argumentsMap != null) {
           this.videoListener(rewardedEvent,
               rewardType: argumentsMap['rewardType'],
               rewardAmount: argumentsMap['rewardAmount']);
+
+        } else if (rewardedEvent == RewardedVideoAdEvent.willDismiss &&
+            argumentsMap != null) {
+          this.videoListener(rewardedEvent,
+              wasFullyWatched: argumentsMap['wasFullyWatched']);
+        
         } else {
           this.videoListener(rewardedEvent);
         }
+
       }
+      
     }
 
     return null;

@@ -4,6 +4,7 @@ import android.app.Activity;
 
 import com.appodeal.ads.Appodeal;
 import com.appodeal.ads.RewardedVideoCallbacks;
+import com.appodeal.ads.UserSettings;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +20,6 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
  * FlutterAppodealPlugin
  */
 public class FlutterAppodealPlugin implements MethodCallHandler, RewardedVideoCallbacks {
-
     private final Registrar registrar;
     private final MethodChannel channel;
 
@@ -41,15 +41,32 @@ public class FlutterAppodealPlugin implements MethodCallHandler, RewardedVideoCa
     @Override
     public void onMethodCall(MethodCall call, Result result) {
         Activity activity = registrar.activity();
+
         if (activity == null) {
             result.error("no_activity", "flutler_appodeal plugin requires a foreground activity", null);
             return;
         }
 
-        if(call.method.equals("setUserData")){
+        if (call.method.equals("setUserIdData")) {
             String userId = call.argument("userId");
             Appodeal.setUserId(userId);
-            }else if (call.method.equals("initialize")) {
+            result.success(Boolean.TRUE);
+        } if (call.method.equals("setUserFullData")) {
+            String userId = call.argument("userId");
+            int age = call.argument("age");
+            int genderIndex = call.argument("gender");
+            Appodeal.setUserId(userId);
+            Appodeal.setUserAge(age);
+            switch (genderIndex) {
+                case 0:
+                    Appodeal.setUserGender(UserSettings.Gender.MALE);
+                case 1:
+                    Appodeal.setUserGender(UserSettings.Gender.FEMALE);
+                case 2:
+                    Appodeal.setUserGender(UserSettings.Gender.OTHER);
+            }
+            result.success(Boolean.TRUE);
+        } else if (call.method.equals("initialize")) {
             String appKey = call.argument("appKey");
             List<Integer> types = call.argument("types");
             Boolean hasConsent = call.argument("hasConsent");
@@ -63,7 +80,8 @@ public class FlutterAppodealPlugin implements MethodCallHandler, RewardedVideoCa
             Appodeal.show(activity, Appodeal.INTERSTITIAL);
             result.success(Boolean.TRUE);
         } else if (call.method.equals("showRewardedVideo")) {
-            Appodeal.show(activity, Appodeal.REWARDED_VIDEO);
+            String placement = call.argument("placement");
+            Appodeal.show(activity, Appodeal.REWARDED_VIDEO, placement);
             result.success(Boolean.TRUE);
         } else if (call.method.equals("isLoaded")) {
             int type = call.argument("type");
@@ -102,31 +120,39 @@ public class FlutterAppodealPlugin implements MethodCallHandler, RewardedVideoCa
 
     // Appodeal Rewarded Video Callbacks
     @Override
-    public void onRewardedVideoLoaded(boolean isPrecache) {
-        channel.invokeMethod("onRewardedVideoLoaded", argumentsMap());
+    public void onRewardedVideoLoaded(boolean b) {
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("precache", b);
+        channel.invokeMethod("rewardedVideoDidLoadAdIsPrecache", arguments);
     }
-
+    
     @Override
     public void onRewardedVideoFailedToLoad() {
         channel.invokeMethod("onRewardedVideoFailedToLoad", argumentsMap());
     }
-
+    
     @Override
     public void onRewardedVideoShown() {
         channel.invokeMethod("onRewardedVideoPresent", argumentsMap());
     }
-
     
     @Override
     public void onRewardedVideoShowFailed() {
-        channel.invokeMethod("onRewardedVideoShowFailed", argumentsMap());
+        channel.invokeMethod("onRewardedVideoDidFailToPresentWithError", argumentsMap());
     }
-
+    
     @Override
     public void onRewardedVideoClicked() {
-        channel.invokeMethod("onRewardedVideoClicked", argumentsMap());
+        channel.invokeMethod("onRewardedVideoPresent", argumentsMap());
     }
-
+    
+    @Override
+    public void onRewardedVideoClosed(boolean b) {
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("wasFullyWatched", b);
+        channel.invokeMethod("rewardedVideoWillDismissAndWasFullyWatched", arguments);
+    }
+    
     @Override
     public void onRewardedVideoFinished(double amount, String s) {
         Map<String, Object> arguments = new HashMap<>();
@@ -136,13 +162,7 @@ public class FlutterAppodealPlugin implements MethodCallHandler, RewardedVideoCa
     }
 
     @Override
-    public void onRewardedVideoClosed(boolean b) {
-        channel.invokeMethod("onRewardedVideoWillDismiss", argumentsMap());
-    }
-
-    @Override
     public void onRewardedVideoExpired() {
         channel.invokeMethod("onRewardedVideoExpired", argumentsMap());
     }
-
-}
+} 
